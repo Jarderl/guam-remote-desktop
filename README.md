@@ -3,7 +3,7 @@
 
 ![1767979818608](https://github.com/user-attachments/assets/2f0adf07-618d-4147-8bff-52d646550220)
 
-# Apache Guacamole Secure Access
+# Secure Access
 
 Gateway de acesso remoto seguro via web utilizando **Apache Guacamole**, **Proxy Reverso** e princípios de **Zero Trust**.
 
