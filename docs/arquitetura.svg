@@ -1,0 +1,235 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" role="img" aria-labelledby="t d">
+  <title id="t">Secure Access: arquitetura</title>
+  <desc id="d">Usuário no navegador acessa por HTTPS o Nginx Proxy Manager, que encaminha ao Apache Guacamole (login e TOTP). O Guacamole usa o guacd para abrir RDP, SSH ou VNC nos servidores internos, que nunca ficam expostos. O MySQL fica em rede interna sem saída.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#121c33"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.35" r="0.6">
+      <stop offset="0" stop-color="#34d399" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#34d399" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16213a"/>
+      <stop offset="1" stop-color="#111a2e"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#1b2742" stroke-width="1"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#5eead4"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Segoe UI", Helvetica, Arial, sans-serif; }
+      .mono { font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "DejaVu Sans Mono", monospace; }
+      .h { fill: #f1f5f9; font-weight: 700; }
+      .p { fill: #cbd5e1; font-size: 12.5px; }
+      .s { fill: #94a3b8; }
+      .flow { stroke: #5eead4; stroke-width: 2.2; fill: none; stroke-dasharray: 6 6; animation: run 1.2s linear infinite; }
+      @keyframes run { to { stroke-dashoffset: -24; } }
+    </style>
+  </defs>
+
+  <!-- fundo -->
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <rect width="1280" height="720" fill="url(#grid)" opacity="0.55"/>
+  <rect width="1280" height="720" fill="url(#halo)"/>
+
+  <!-- cabeçalho -->
+  <text x="36" y="66" class="h" font-size="34">Secure Access</text>
+  <text x="36" y="96" class="s" font-size="15">Acesso remoto pelo navegador com Apache Guacamole, MFA e proxy reverso, sem VPN e sem servidor exposto</text>
+  <g transform="translate(1046 42)">
+    <rect width="198" height="32" rx="16" fill="#0f2a2a" stroke="#14b8a6" stroke-opacity="0.6"/>
+    <text x="99" y="21" text-anchor="middle" class="mono" font-size="12.5" fill="#5eead4">$ docker compose up -d</text>
+  </g>
+
+  <!-- conectores do fluxo -->
+  <g>
+    <path class="flow" d="M230 202H285" marker-end="url(#arrow)"/>
+    <path class="flow" d="M485 202H540" marker-end="url(#arrow)"/>
+    <path class="flow" d="M740 202H795" marker-end="url(#arrow)"/>
+    <path class="flow" d="M995 202H1050" marker-end="url(#arrow)"/>
+    <text x="258" y="190" text-anchor="middle" class="mono" font-size="10.5" fill="#5eead4">HTTPS</text>
+    <text x="513" y="190" text-anchor="middle" class="mono" font-size="10.5" fill="#5eead4">:8080</text>
+    <text x="768" y="190" text-anchor="middle" class="mono" font-size="10.5" fill="#5eead4">:4822</text>
+    <text x="1023" y="190" text-anchor="middle" class="mono" font-size="10.5" fill="#5eead4">RDP·SSH</text>
+  </g>
+
+  <!-- ligação Guacamole ↔ MySQL -->
+  <path d="M640 380V480" stroke="#60a5fa" stroke-width="2" stroke-dasharray="3 5" fill="none"/>
+
+  <!-- 1. Usuário -->
+  <g transform="translate(36 150)">
+    <rect width="188" height="230" rx="16" fill="url(#card)" stroke="#2a3756"/>
+    <rect x="16" width="156" height="3" rx="1.5" fill="#94a3b8"/>
+    <circle cx="94" cy="52" r="26" fill="#94a3b8" fill-opacity="0.12" stroke="#94a3b8" stroke-opacity="0.5"/>
+    <g fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="80" y="40" width="28" height="19" rx="3"/>
+      <path d="M88 65H100M94 59V65"/>
+    </g>
+    <text x="94" y="106" text-anchor="middle" class="h" font-size="16">Usuário</text>
+    <text x="94" y="126" text-anchor="middle" class="mono" font-size="11" fill="#94a3b8">navegador HTML5</text>
+    <text x="18" y="158" class="p">• Sem cliente instalado</text>
+    <text x="18" y="180" class="p">• Sem VPN</text>
+    <text x="18" y="202" class="p">• Qualquer lugar</text>
+  </g>
+
+  <!-- 2. Nginx Proxy Manager -->
+  <g transform="translate(291 150)">
+    <rect width="188" height="230" rx="16" fill="url(#card)" stroke="#2a3756"/>
+    <rect x="16" width="156" height="3" rx="1.5" fill="#22d3ee"/>
+    <circle cx="94" cy="52" r="26" fill="#22d3ee" fill-opacity="0.12" stroke="#22d3ee" stroke-opacity="0.5"/>
+    <g fill="none" stroke="#67e8f9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M94 38L105 42V51C105 58 100 63 94 66C88 63 83 58 83 51V42Z"/>
+      <path d="M89 52L93 56L100 48"/>
+    </g>
+    <text x="94" y="106" text-anchor="middle" class="h" font-size="16">Proxy reverso</text>
+    <text x="94" y="126" text-anchor="middle" class="mono" font-size="11" fill="#22d3ee">Nginx Proxy Manager</text>
+    <text x="18" y="158" class="p">• Único ponto exposto</text>
+    <text x="18" y="180" class="p">• TLS Let's Encrypt</text>
+    <text x="18" y="202" class="p">• /acesso → Guacamole</text>
+  </g>
+
+  <!-- 3. Guacamole -->
+  <g transform="translate(546 150)">
+    <rect width="188" height="230" rx="16" fill="url(#card)" stroke="#34d399" stroke-opacity="0.55"/>
+    <rect x="16" width="156" height="3" rx="1.5" fill="#34d399"/>
+    <circle cx="94" cy="52" r="26" fill="#34d399" fill-opacity="0.14" stroke="#34d399" stroke-opacity="0.6"/>
+    <g fill="none" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="84" y="49" width="20" height="15" rx="3"/>
+      <path d="M89 49V45A5 5 0 0 1 99 45V49"/>
+      <path d="M94 55V58"/>
+    </g>
+    <text x="94" y="106" text-anchor="middle" class="h" font-size="16">Guacamole</text>
+    <text x="94" y="126" text-anchor="middle" class="mono" font-size="11" fill="#34d399">1.6 · porta de acesso</text>
+    <text x="18" y="158" class="p">① Usuário e senha</text>
+    <text x="18" y="180" class="p">② Código TOTP (MFA)</text>
+    <text x="18" y="202" class="p">• Bloqueio por tentativas</text>
+  </g>
+
+  <!-- 4. guacd -->
+  <g transform="translate(801 150)">
+    <rect width="188" height="230" rx="16" fill="url(#card)" stroke="#2a3756"/>
+    <rect x="16" width="156" height="3" rx="1.5" fill="#a78bfa"/>
+    <circle cx="94" cy="52" r="26" fill="#a78bfa" fill-opacity="0.12" stroke="#a78bfa" stroke-opacity="0.5"/>
+    <g fill="none" stroke="#c4b5fd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="81" y="41" width="26" height="21" rx="3"/>
+      <path d="M86 48L90 51.5L86 55M93 56H101"/>
+    </g>
+    <text x="94" y="106" text-anchor="middle" class="h" font-size="16">guacd</text>
+    <text x="94" y="126" text-anchor="middle" class="mono" font-size="11" fill="#a78bfa">motor de protocolos</text>
+    <text x="18" y="158" class="p">• RDP, SSH e VNC</text>
+    <text x="18" y="180" class="p">• Gravação de sessão</text>
+    <text x="18" y="202" class="p">• Só ele sai para a LAN</text>
+  </g>
+
+  <!-- 5. Servidores internos -->
+  <g transform="translate(1056 150)">
+    <rect width="188" height="230" rx="16" fill="url(#card)" stroke="#2a3756"/>
+    <rect x="16" width="156" height="3" rx="1.5" fill="#fbbf24"/>
+    <circle cx="94" cy="52" r="26" fill="#fbbf24" fill-opacity="0.12" stroke="#fbbf24" stroke-opacity="0.5"/>
+    <g fill="none" stroke="#fcd34d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="82" y="40" width="24" height="10" rx="2"/>
+      <rect x="82" y="54" width="24" height="10" rx="2"/>
+      <path d="M87 45H87.5M87 59H87.5"/>
+    </g>
+    <text x="94" y="106" text-anchor="middle" class="h" font-size="16">Servidores</text>
+    <text x="94" y="126" text-anchor="middle" class="mono" font-size="11" fill="#fbbf24">rede interna</text>
+    <text x="18" y="158" class="p">③ Login da máquina</text>
+    <text x="18" y="180" class="p">• Windows e Linux</text>
+    <text x="18" y="202" class="p">• Nunca expostos</text>
+  </g>
+
+  <!-- redes Docker -->
+  <g class="mono" font-size="10.5">
+    <path d="M130 412H385" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="130" cy="412" r="4" fill="#64748b"/><circle cx="385" cy="412" r="4" fill="#64748b"/>
+    <text x="257" y="403" text-anchor="middle" fill="#94a3b8">internet</text>
+
+    <path d="M385 444H640" stroke="#22d3ee" stroke-width="3" stroke-linecap="round" stroke-opacity="0.8"/>
+    <circle cx="385" cy="444" r="4" fill="#22d3ee"/><circle cx="640" cy="444" r="4" fill="#22d3ee"/>
+    <text x="512" y="463" text-anchor="middle" fill="#67e8f9">sa-edge</text>
+
+    <path d="M640 412H895" stroke="#a78bfa" stroke-width="3" stroke-linecap="round" stroke-opacity="0.8"/>
+    <circle cx="640" cy="412" r="4" fill="#a78bfa"/><circle cx="895" cy="412" r="4" fill="#a78bfa"/>
+    <text x="767" y="403" text-anchor="middle" fill="#c4b5fd">sa-backend · internal</text>
+
+    <path d="M895 444H1150" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-opacity="0.8"/>
+    <circle cx="895" cy="444" r="4" fill="#fbbf24"/><circle cx="1150" cy="444" r="4" fill="#fbbf24"/>
+    <text x="1022" y="463" text-anchor="middle" fill="#fcd34d">sa-lan</text>
+  </g>
+
+  <!-- MySQL -->
+  <g transform="translate(546 480)">
+    <rect width="188" height="132" rx="16" fill="url(#card)" stroke="#2a3756"/>
+    <rect x="16" width="156" height="3" rx="1.5" fill="#60a5fa"/>
+    <g fill="none" stroke="#93c5fd" stroke-width="2">
+      <ellipse cx="94" cy="30" rx="13" ry="5"/>
+      <path d="M81 30V48C81 51 87 53 94 53C101 53 107 51 107 48V30"/>
+      <path d="M81 39C81 42 87 44 94 44C101 44 107 42 107 39"/>
+    </g>
+    <text x="94" y="80" text-anchor="middle" class="h" font-size="15">MySQL 8.4</text>
+    <text x="94" y="100" text-anchor="middle" class="p" font-size="12">usuários · conexões</text>
+    <text x="94" y="118" text-anchor="middle" class="p" font-size="12">histórico · chaves TOTP</text>
+  </g>
+
+  <!-- painel: três barreiras -->
+  <g transform="translate(36 490)">
+    <rect width="443" height="190" rx="16" fill="#0f1a2e" stroke="#2a3756"/>
+    <text x="22" y="36" class="h" font-size="16">Três barreiras até a máquina</text>
+    <g transform="translate(22 58)">
+      <circle cx="16" cy="16" r="16" fill="#34d399" fill-opacity="0.15" stroke="#34d399"/>
+      <text x="16" y="21" text-anchor="middle" font-size="14" font-weight="700" fill="#6ee7b7">1</text>
+      <text x="44" y="14" class="h" font-size="13.5">Senha do Guacamole</text>
+      <text x="44" y="30" class="s" font-size="12">conta individual, com histórico de acesso</text>
+    </g>
+    <g transform="translate(22 100)">
+      <circle cx="16" cy="16" r="16" fill="#34d399" fill-opacity="0.15" stroke="#34d399"/>
+      <text x="16" y="21" text-anchor="middle" font-size="14" font-weight="700" fill="#6ee7b7">2</text>
+      <text x="44" y="14" class="h" font-size="13.5">Código TOTP</text>
+      <text x="44" y="30" class="s" font-size="12">app autenticador, cadastro obrigatório</text>
+    </g>
+    <g transform="translate(22 142)">
+      <circle cx="16" cy="16" r="16" fill="#fbbf24" fill-opacity="0.15" stroke="#fbbf24"/>
+      <text x="16" y="21" text-anchor="middle" font-size="14" font-weight="700" fill="#fcd34d">3</text>
+      <text x="44" y="14" class="h" font-size="13.5">Credencial do servidor</text>
+      <text x="44" y="30" class="s" font-size="12">login do Windows ou Linux de destino</text>
+    </g>
+  </g>
+
+  <!-- painel: defesa em camadas -->
+  <g transform="translate(801 490)">
+    <rect width="443" height="190" rx="16" fill="#0f1a2e" stroke="#2a3756"/>
+    <text x="22" y="36" class="h" font-size="16">Defesa em camadas</text>
+    <g font-size="12.5" fill="#e2e8f0">
+      <g transform="translate(22 56)">
+        <rect width="192" height="32" rx="8" fill="#22d3ee" fill-opacity="0.08" stroke="#22d3ee" stroke-opacity="0.35"/>
+        <text x="12" y="21">Só 80/443 abertos</text>
+      </g>
+      <g transform="translate(228 56)">
+        <rect width="192" height="32" rx="8" fill="#a78bfa" fill-opacity="0.08" stroke="#a78bfa" stroke-opacity="0.35"/>
+        <text x="12" y="21">Banco sem saída externa</text>
+      </g>
+      <g transform="translate(22 98)">
+        <rect width="192" height="32" rx="8" fill="#34d399" fill-opacity="0.08" stroke="#34d399" stroke-opacity="0.35"/>
+        <text x="12" y="21">Bloqueio de força bruta</text>
+      </g>
+      <g transform="translate(228 98)">
+        <rect width="192" height="32" rx="8" fill="#34d399" fill-opacity="0.08" stroke="#34d399" stroke-opacity="0.35"/>
+        <text x="12" y="21">IP real nos registros</text>
+      </g>
+      <g transform="translate(22 140)">
+        <rect width="192" height="32" rx="8" fill="#fbbf24" fill-opacity="0.08" stroke="#fbbf24" stroke-opacity="0.35"/>
+        <text x="12" y="21">Sessões gravadas</text>
+      </g>
+      <g transform="translate(228 140)">
+        <rect width="192" height="32" rx="8" fill="#60a5fa" fill-opacity="0.08" stroke="#60a5fa" stroke-opacity="0.35"/>
+        <text x="12" y="21">Senhas geradas no setup</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- rodapé -->
+  <text x="640" y="706" text-anchor="middle" class="mono" font-size="11" fill="#475569">github.com/Jarderl/guam-remote-desktop</text>
+</svg>
