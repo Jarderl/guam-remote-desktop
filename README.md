@@ -61,6 +61,28 @@ O **Proxy Reverso** atua como camada de proteção e controle, enquanto o **Apac
 
 ---
 
+##  Instalação rápida (stack única)
+
+Tudo sobe com um único `docker-compose.yml`: Nginx Proxy Manager, Apache Guacamole 1.6.0 com MFA (TOTP), guacd e MySQL, com o banco inicializado automaticamente.
+
+```bash
+git clone https://github.com/Jarderl/guam-remote-desktop.git
+cd guam-remote-desktop
+bash setup.sh          # gera o .env com senhas aleatórias
+docker compose up -d
+```
+
+Depois configure o domínio no NPM e faça o primeiro acesso em `https://SEU_DOMINIO/acesso/`. O passo a passo completo, incluindo o bloco de configuração do NPM, o cadastro do MFA e a solução de problemas, está em **[INSTALACAO.md](INSTALACAO.md)**.
+
+| Arquivo | Para que serve |
+|---|---|
+| `docker-compose.yml` | Stack completa, com redes isoladas e só o NPM exposto |
+| `.env.example` / `setup.sh` | Variáveis e geração das senhas |
+| `nginx/npm-advanced-guacamole.conf` | Bloco para a aba *Advanced* do Proxy Host no NPM |
+| `INSTALACAO.md` | Guia de instalação e operação |
+
+---
+
 ##  Casos de Uso
 
 - Ambientes corporativos

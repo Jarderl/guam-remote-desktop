@@ -1,0 +1,182 @@
+# =====================================================================
+#  Secure Access — Apache Guacamole + MFA (TOTP) + Nginx Proxy Manager
+#  Stack única. Suba com:  ./setup.sh   (gera o .env)  e depois
+#                          docker compose up -d
+#
+#  Fluxo de acesso:
+#    Internet → NPM (443, HTTPS) → Guacamole (/acesso) → login + TOTP
+#             → guacd → máquina interna (RDP/SSH/VNC) → login da máquina
+#
+#  Nada do Guacamole é publicado no host: a única porta exposta à
+#  internet é 80/443 do NPM. O painel do NPM (81) fica preso ao
+#  127.0.0.1 por padrão.
+# =====================================================================
+
+name: secure-access
+
+services:
+
+  # -------------------------------------------------------------------
+  # 1) Proxy reverso (porta de entrada única)
+  # -------------------------------------------------------------------
+  npm:
+    image: jc21/nginx-proxy-manager:${NPM_TAG:-latest}
+    container_name: sa-npm
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "${NPM_ADMIN_BIND:-127.0.0.1}:81:81"
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      DISABLE_IPV6: "true"
+    volumes:
+      - ./data/npm/data:/data
+      - ./data/npm/letsencrypt:/etc/letsencrypt
+    networks:
+      - edge
+
+  # -------------------------------------------------------------------
+  # 2) Preparação (roda uma vez e sai)
+  #    - gera o schema SQL oficial do Guacamole para o MySQL
+  #    - ajusta dono/permissão da pasta de gravações
+  #      (guacd = uid 1000 escreve; guacamole = gid 1001 lê)
+  # -------------------------------------------------------------------
+  guac-init:
+    image: guacamole/guacamole:${GUAC_VERSION:-1.6.0}
+    container_name: sa-guac-init
+    user: root
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        if [ ! -s /initdb/001-guacamole-schema.sql ]; then
+          /opt/guacamole/bin/initdb.sh --mysql > /initdb/001-guacamole-schema.sql
+          echo "schema gerado"
+        else
+          echo "schema ja existe, nada a fazer"
+        fi
+        chown 1000:1001 /recordings
+        chmod 2750 /recordings
+    volumes:
+      - guac-initdb:/initdb
+      - ./data/recordings:/recordings
+    network_mode: none
+
+  # -------------------------------------------------------------------
+  # 3) Banco de dados (usuários, conexões, histórico, segredos TOTP)
+  #    O schema é importado automaticamente no primeiro start.
+  # -------------------------------------------------------------------
+  db:
+    image: mysql:${MYSQL_TAG:-8.4}
+    container_name: sa-mysql
+    restart: unless-stopped
+    depends_on:
+      guac-init:
+        condition: service_completed_successfully
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-guacamole_db}
+      MYSQL_USER: ${MYSQL_USER:-guacamole_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no .env}
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - guac-initdb:/docker-entrypoint-initdb.d:ro
+    # Testa por TCP e consulta uma tabela do Guacamole: só fica "healthy"
+    # depois que o import do schema terminou (o servidor temporário da
+    # inicialização não escuta TCP, então não engana o healthcheck).
+    healthcheck:
+      test: ["CMD-SHELL", "mysql --protocol=tcp -h 127.0.0.1 -u\"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" \"$$MYSQL_DATABASE\" -e 'SELECT 1 FROM guacamole_user LIMIT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks:
+      - backend
+
+  # -------------------------------------------------------------------
+  # 4) guacd — o "motor" que fala RDP/SSH/VNC com as máquinas internas
+  #    Fica na rede 'backend' (fala com o Guacamole) e na 'lan' (sai
+  #    para a rede interna). Não é acessível a partir do NPM.
+  # -------------------------------------------------------------------
+  guacd:
+    image: guacamole/guacd:${GUAC_VERSION:-1.6.0}
+    container_name: sa-guacd
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - ./data/recordings:/var/lib/guacamole/recordings
+    networks:
+      - backend
+      - lan
+
+  # -------------------------------------------------------------------
+  # 5) Guacamole web — 1º fator (usuário/senha) + 2º fator (TOTP)
+  # -------------------------------------------------------------------
+  guacamole:
+    image: guacamole/guacamole:${GUAC_VERSION:-1.6.0}
+    container_name: sa-guacamole
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      guacd:
+        condition: service_started
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+
+      # Caminho em que o Guacamole responde (ex.: acesso → /acesso/).
+      # Deve ser o MESMO caminho usado no location do NPM.
+      WEBAPP_CONTEXT: ${GUAC_PATH:-acesso}
+
+      # guacd
+      GUACD_HOSTNAME: guacd
+      GUACD_PORT: "4822"
+
+      # Banco
+      MYSQL_ENABLED: "true"
+      MYSQL_HOSTNAME: db
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-guacamole_db}
+      MYSQL_USERNAME: ${MYSQL_USER:-guacamole_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+      # MFA (TOTP — Google Authenticator, Microsoft Authenticator, etc.)
+      TOTP_ENABLED: "true"
+      TOTP_ISSUER: ${TOTP_ISSUER:-Secure Access}
+
+      # Bloqueio de força bruta por IP
+      BAN_ENABLED: "true"
+      BAN_MAX_INVALID_ATTEMPTS: ${BAN_MAX_INVALID_ATTEMPTS:-5}
+      BAN_ADDRESS_DURATION: ${BAN_ADDRESS_DURATION:-600}
+
+      # Lê o IP real do cliente no X-Forwarded-For enviado pelo NPM
+      # (sem isso, o histórico e o ban registram o IP do proxy)
+      REMOTE_IP_VALVE_ENABLED: "true"
+
+      # Exibe as gravações de sessão no histórico (Configurações → Histórico)
+      RECORDING_ENABLED: "true"
+      RECORDING_SEARCH_PATH: /var/lib/guacamole/recordings
+    volumes:
+      - ./data/recordings:/var/lib/guacamole/recordings:ro
+    networks:
+      - edge
+      - backend
+
+networks:
+  # NPM ↔ Guacamole
+  edge:
+    name: sa-edge
+  # Guacamole ↔ guacd ↔ MySQL — sem saída para fora (internal)
+  backend:
+    name: sa-backend
+    internal: true
+  # guacd → máquinas da rede interna
+  lan:
+    name: sa-lan
+
+volumes:
+  guac-initdb:
