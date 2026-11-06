@@ -1,7 +1,7 @@
 
 
 
-![1767979818608](https://github.com/user-attachments/assets/2f0adf07-618d-4147-8bff-52d646550220)
+![Secure Access: arquitetura](docs/arquitetura.svg)
 
 # Secure Access
 
